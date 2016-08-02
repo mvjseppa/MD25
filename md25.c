@@ -4,43 +4,44 @@
 
 static struct i2c_client *md25_client;
 
-static ssize_t version_show(struct device *child, 
-		struct device_attribute *attr, char* buf)
+static ssize_t version_show(struct device *child,
+		struct device_attribute *attr, char *buf)
 {
 	s32 ver = i2c_smbus_read_byte_data(md25_client, 0x13);
-	return sprintf(buf, "%d\n", ver);	
+
+	return sprintf(buf, "%d\n", ver);
 }
 
-static ssize_t encoder_show(struct device *child, 
-		struct device_attribute *attr, char* buf)
+static ssize_t encoder_show(struct device *child,
+		struct device_attribute *attr, char *buf)
 {
-	
+
 	s32 enc1 = 0;
 	s32 enc2 = 0;
-	
+
 	enc1  = i2c_smbus_read_byte_data(md25_client, 0x02) << 24;
 	enc1 |= i2c_smbus_read_byte_data(md25_client, 0x03) << 16;
 	enc1 |= i2c_smbus_read_byte_data(md25_client, 0x04) << 8;
 	enc1 |= i2c_smbus_read_byte_data(md25_client, 0x05);
-	
+
 	enc2  = i2c_smbus_read_byte_data(md25_client, 0x06) << 24;
 	enc2 |= i2c_smbus_read_byte_data(md25_client, 0x07) << 16;
 	enc2 |= i2c_smbus_read_byte_data(md25_client, 0x08) << 8;
 	enc2 |= i2c_smbus_read_byte_data(md25_client, 0x09);
-	
+
 	return sprintf(buf, "%d,%d\n", enc1, enc2);
-	
+
 }
 
-static ssize_t speed_store(struct device *dev, 
+static ssize_t speed_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	u8 s1, s2;
-	
-	if(sscanf(buf, "%hhu, %hhu", &s1, &s2) < 2)
-		if(sscanf(buf, "%hhu,%hhu", &s1, &s2) < 2)
+
+	if (sscanf(buf, "%hhu, %hhu", &s1, &s2) < 2)
+		if (sscanf(buf, "%hhu,%hhu", &s1, &s2) < 2)
 			return 0;
-	
+
 	i2c_smbus_write_byte_data(md25_client, 0x00, s1);
 	i2c_smbus_write_byte_data(md25_client, 0x01, s2);
 	return count;
@@ -70,7 +71,7 @@ static const struct attribute_group *md25_attr_groups[] = {
 static int md25_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
-	
+
 	pr_debug("MD25 driver online\n");
 	md25_client = client;
 	return 0;
@@ -99,7 +100,12 @@ static struct i2c_driver md25_driver = {
 };
 
 
-/*The module init defines a new i2c board present int the system.*/
+/*
+ * To be able to compile this as an out-of-tree module,
+ * the module init defines i2c board info and allocates the i2c adapter.
+ * Normally this would be done in a board sepcific section under arch.
+ * Now we just make this module Raspberry Pi 2 specific.
+ */
 static int __init md25_init(void)
 {
 
@@ -113,15 +119,15 @@ static int __init md25_init(void)
 	};
 
 	ret = i2c_add_driver(&md25_driver);
-	if(ret) 
-		return(ret);
+	if (ret)
+		return ret;
 
 	adapter = i2c_get_adapter(1); /*on raspi2 the default i2c bus is i2c-1*/
-	if (!adapter) 
+	if (!adapter)
 		return -EINVAL;
 
 	client = i2c_new_device(adapter, &info);
-	if (!client) 
+	if (!client)
 		return -EINVAL;
 
 	pr_debug("MD25 init ok!\n");
