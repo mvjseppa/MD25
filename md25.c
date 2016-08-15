@@ -109,7 +109,7 @@ static struct i2c_driver md25_driver = {
 static int __init md25_init(void)
 {
 
-	int ret;
+	int retval = 0;
 	struct i2c_adapter *adapter;
 	struct i2c_client *client;
 
@@ -118,20 +118,29 @@ static int __init md25_init(void)
 		.addr = 0x58,
 	};
 
-	ret = i2c_add_driver(&md25_driver);
-	if (ret)
-		return ret;
+	retval = i2c_add_driver(&md25_driver);
+	if (retval)
+		return retval;
 
 	adapter = i2c_get_adapter(1); /*on raspi2 the default i2c bus is i2c-1*/
-	if (!adapter)
-		return -EINVAL;
-
+	if (!adapter){
+		retval = -EINVAL;
+		goto cleanup;
+	}
+		
 	client = i2c_new_device(adapter, &info);
-	if (!client)
-		return -EINVAL;
-
+	if (!client){
+		retval = -EINVAL;
+		goto cleanup;
+	}
+	
 	pr_debug("MD25 init ok!\n");
-	return 0;
+	return retval;
+	
+	cleanup:
+	i2c_del_driver(&md25_driver);
+	return retval;
+	
 }
 
 static void __exit md25_exit(void)
